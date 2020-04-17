@@ -630,8 +630,7 @@ func basicLog(logLevel int, traceLevel int, isLocked bool, format string, prefix
 			callerInfo = fmt.Sprintf("[%d:%d %s:%d (%s)] ", os.Getpid(),
 				getGID(), moduleAndFileName, line, callingFuncName)
 		} else {
-			callerInfo = fmt.Sprintf("[%d %s:%d (%s)] ", os.Getpid(),
-				moduleAndFileName, line, callingFuncName)
+			callerInfo = fmt.Sprintf("[%s:%d] ", moduleAndFileName, line)
 		}
 	}
 
