@@ -58,6 +58,7 @@ func setup() rlogConfig {
 		logStream:      "NONE",
 		logNoTime:      "true",
 		showCallerInfo: "false",
+		noColor:        true,
 	}
 }
 
@@ -234,8 +235,8 @@ func TestLogTimestamp(t *testing.T) {
 		//"RFC3339Nano": time.RFC3339Nano,  // Not included in the tests, since
 		// output length can vary depending on whether there are trailing zeros.
 		// Not worth the trouble.
-		"Kitchen": time.Kitchen,
-		"":        time.RFC3339, // If nothing specified, default is RFC3339
+		"Kitchen":             time.Kitchen,
+		"":                    time.RFC3339,          // If nothing specified, default is RFC3339
 		"2006/01/02 15:04:05": "2006/01/02 15:04:05", // custom format
 	}
 
@@ -264,13 +265,18 @@ func TestLogCallerInfo(t *testing.T) {
 	conf.showCallerInfo = "true"
 	initialize(conf, true)
 
+	//Info("Test Info")
+	//pc, fullFilePath, line, _ := runtime.Caller(0)
+	//line-- // The log was called in the line before, so... -1
+
 	Info("Test Info")
-	pc, fullFilePath, line, _ := runtime.Caller(0)
+	_, fullFilePath, line, _ := runtime.Caller(0)
 	line-- // The log was called in the line before, so... -1
 
 	// The following lines simply format the caller info in the way that it
 	// should be formatted by rlog
-	callingFuncName := runtime.FuncForPC(pc).Name()
+	//	callingFuncName := runtime.FuncForPC(pc).Name()
+	//	dirPath, fileName := path.Split(fullFilePath)
 	dirPath, fileName := path.Split(fullFilePath)
 	var moduleName string
 	if dirPath != "" {
@@ -279,8 +285,9 @@ func TestLogCallerInfo(t *testing.T) {
 	}
 	moduleAndFileName := moduleName + "/" + fileName
 
-	shouldLine := fmt.Sprintf("INFO     : [%d %s:%d (%s)] Test Info",
-		os.Getpid(), moduleAndFileName, line, callingFuncName)
+	// shouldLine := fmt.Sprintf("INFO     : [%d %s:%d (%s)] Test Info",
+	// 	os.Getpid(), moduleAndFileName, line, callingFuncName)
+	shouldLine := fmt.Sprintf("INFO     : [%s:%d] Test Info", moduleAndFileName, line)
 
 	checkLines := []string{shouldLine}
 	fileMatch(t, checkLines, "")

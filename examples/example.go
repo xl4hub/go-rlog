@@ -1,8 +1,11 @@
 package main
 
 //import "time"
-import "os"
-import "github.com/romana/rlog"
+import (
+	"os"
+
+	rlog "github.com/xl4hub/go-rlog"
+)
 
 func someRecursiveFunction(x int) {
 	// The Trace log functions allow you to set a log level with a numeric

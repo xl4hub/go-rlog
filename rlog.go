@@ -70,6 +70,41 @@ var levelNumbers = map[string]int{
 	"NONE":     levelNone,
 }
 
+const (
+	cReset  = "\033[0m"
+	cRed    = "\033[31m"
+	cGreen  = "\033[32m"
+	cYellow = "\033[33m"
+	cBlue   = "\033[34m"
+	cPurple = "\033[35m"
+	cCyan   = "\033[36m"
+	cWhite  = "\033[37m"
+)
+
+var levelColors = map[int]string{
+	levelTrace: cBlue,
+	levelDebug: cCyan,
+	levelInfo:  cGreen,
+	levelWarn:  cYellow,
+	levelErr:   cRed,
+	levelCrit:  cRed,
+	levelNone:  cWhite,
+}
+
+func colorSet(level int) string {
+	if configFromEnvVars.noColor {
+		return ""
+	}
+	return levelColors[level]
+}
+
+func colorRes() string {
+	if configFromEnvVars.noColor {
+		return ""
+	}
+	return cReset
+}
+
 // filterSpec holds a list of filters. These are applied to the 'caller'
 // information of a log message (calling module and file) to see if this
 // message should be logged. Different log or trace levels per file can
@@ -100,6 +135,7 @@ type rlogConfig struct {
 	showCallerInfo  string // Flag to determine if caller info is logged
 	showGoroutineID string // Flag to determine if goroute ID shows in caller info
 	confCheckInterv string // Interval in seconds for checking config file
+	noColor         bool   // Flag to determine if color is used
 }
 
 // We keep a copy of what was supplied via environment variables, since we will
@@ -137,24 +173,25 @@ var (
 // trace messages) or are level strings (for log messages).
 //
 // Format "<filter>,<filter>,[<filter>]..."
-//     filter:
-//       <pattern=level> | <level>
-//     pattern:
-//       shell glob to match caller file name
-//     level:
-//       log or trace level of the logs to enable in matched files.
 //
-//     Example:
-//     - "RLOG_TRACE_LEVEL=3"
-//       Just a global trace level of 3 for all files and modules.
-//     - "RLOG_TRACE_LEVEL=client.go=1,ip*=5,3"
-//       This enables trace level 1 in client.go, level 5 in all files whose
-//       names start with 'ip', and level 3 for everyone else.
-//     - "RLOG_LOG_LEVEL=DEBUG"
-//       Global log level DEBUG for all files and modules.
-//     - "RLOG_LOG_LEVEL=client.go=ERROR,INFO,ip*=WARN"
-//       ERROR and higher for client.go, WARN or higher for all files whose
-//       name starts with 'ip', INFO for everyone else.
+//	filter:
+//	  <pattern=level> | <level>
+//	pattern:
+//	  shell glob to match caller file name
+//	level:
+//	  log or trace level of the logs to enable in matched files.
+//
+//	Example:
+//	- "RLOG_TRACE_LEVEL=3"
+//	  Just a global trace level of 3 for all files and modules.
+//	- "RLOG_TRACE_LEVEL=client.go=1,ip*=5,3"
+//	  This enables trace level 1 in client.go, level 5 in all files whose
+//	  names start with 'ip', and level 3 for everyone else.
+//	- "RLOG_LOG_LEVEL=DEBUG"
+//	  Global log level DEBUG for all files and modules.
+//	- "RLOG_LOG_LEVEL=client.go=ERROR,INFO,ip*=WARN"
+//	  ERROR and higher for client.go, WARN or higher for all files whose
+//	  name starts with 'ip', INFO for everyone else.
 func (spec *filterSpec) fromString(s string, isTraceLevels bool, globalLevelDefault int) {
 	var globalLevel int = globalLevelDefault
 	var levelToken string
@@ -346,6 +383,8 @@ func updateConfigFromFile(config *rlogConfig) {
 			config.showCallerInfo = updateIfNeeded(config.showCallerInfo, val, priority)
 		case "RLOG_GOROUTINE_ID":
 			config.showGoroutineID = updateIfNeeded(config.showGoroutineID, val, priority)
+		case "RLOG_NOCOLOR":
+			config.noColor = isTrueBoolString(val)
 		default:
 			rlogIssue("Unknown or illegal setting name in config file %s:%d. Ignored.",
 				settingConfFile, i)
@@ -367,6 +406,7 @@ func configFromEnv() rlogConfig {
 		showCallerInfo:  os.Getenv("RLOG_CALLER_INFO"),
 		showGoroutineID: os.Getenv("RLOG_GOROUTINE_ID"),
 		confCheckInterv: os.Getenv("RLOG_CONF_CHECK_INTERVAL"),
+		noColor:         isTrueBoolString(os.Getenv("RLOG_NOCOLOR")),
 	}
 }
 
@@ -642,8 +682,8 @@ func basicLog(logLevel int, traceLevel int, isLocked bool, format string, prefix
 		msg = fmt.Sprintln(a...)
 	}
 	levelDecoration := levelStrings[logLevel] + prefixAddition
-	logLine := fmt.Sprintf("%s%-9s: %s%s",
-		now.Format(settingDateTimeFormat), levelDecoration, callerInfo, msg)
+	logLine := fmt.Sprintf("%s%s%-9s%s: %s%s",
+		now.Format(settingDateTimeFormat), colorSet(logLevel), levelDecoration, colorRes(), callerInfo, msg)
 	if logWriterStream != nil {
 		logWriterStream.Print(logLine)
 	}
